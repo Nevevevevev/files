@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accelerating Dot Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #111;
+            overflow: hidden;
+            font-family: sans-serif;
+            color: #fff;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            z-index: 10;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        input {
+            width: 80px;
+            padding: 5px;
+            background: #222;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #2ed573;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #26af5f;
+        }
+        #telemetry {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        #dot {
+            width: 15px;
+            height: 15px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 0px;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <label for="accelInput">Acceleration (mph per second):</label>
+        <input type="number" id="accelInput" value="1" step="0.1" min="0">
+        <button id="startBtn">Start / Reset</button>
+        
+        <div id="telemetry">
+            Speed: <span id="currentSpeed">0.00</span> mph<br>
+            Distance: <span id="currentDist">0.0</span> inches
+        </div>
+    </div>
+
+    <div id="dot"></div>
+
+    <script>
+        const dot = document.getElementById('dot');
+        const accelInput = document.getElementById('accelInput');
+        const startBtn = document.getElementById('startBtn');
+        const currentSpeedText = document.getElementById('currentSpeed');
+        const currentDistText = document.getElementById('currentDist');
+
+        // Physical screen calibration baseline (Standard 96 Pixels Per Inch)
+        const PPI = 96; 
+        const ONE_MPH_IN_INCHES = 17.6;
+        const ONE_MPH_IN_PIXELS = ONE_MPH_IN_INCHES * PPI;
+
+        let posX = 0;
+        let speedMph = 0; 
+        let accelerationMphPerSec = 0;
+        let isRunning = false;
+        let lastTime = 0;
+
+        function animate(currentTime) {
+            if (!isRunning) return;
+
+            // Calculate time passed in seconds
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            // Increase the speed based on acceleration (v = u + at)
+            speedMph += accelerationMphPerSec * deltaTime;
+
+            // Convert current speed to pixels per second
+            const currentPixelsPerSecond = speedMph * ONE_MPH_IN_PIXELS;
+
+            // Move the dot forward
+            posX += currentPixelsPerSecond * deltaTime;
+
+            // Update live telemetry texts
+            currentSpeedText.textContent = speedMph.toFixed(2);
+            currentDistText.textContent = (posX / PPI).toFixed(1);
+
+            // Apply position to dot
+            dot.style.left = posX + 'px';
+
+            // Loop reset if it goes completely off screen
+            if (posX > window.innerWidth) {
+                resetSimulation();
+            } else {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        function resetSimulation() {
+            isRunning = false;
+            posX = 0;
+            speedMph = 0;
+            dot.style.left = '0px';
+            currentSpeedText.textContent = "0.00";
+            currentDistText.textContent = "0.0";
+        }
+
+        startBtn.addEventListener('click', () => {
+            resetSimulation();
+            
+            // Read user input
+            accelerationMphPerSec = parseFloat(accelInput.value) || 0;
+            
+            // Begin loop
+            isRunning = true;
+            lastTime = performance.now();
+            requestAnimationFrame(animate);
+        });
+    </script>
+</body>
+</html>
